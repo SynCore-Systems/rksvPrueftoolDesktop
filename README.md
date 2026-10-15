@@ -46,7 +46,7 @@ scripts/build.sh 0.1.0
 | Ausgabe | Inhalt |
 |---|---|
 | `dist/public/RKSV-Prueftool.exe` | Java-Laufzeit eingebettet, BMF-Prüfmodul wird beim ersten Start geladen. **Wird veröffentlicht.** |
-| `dist/internal/RKSV-Prueftool-intern.exe` | Zusätzlich das BMF-Prüfmodul eingebettet, voll offline. **Nur intern** – das BMF-Prüfmodul ist ohne Lizenz veröffentlicht und darf daher nicht weiterverbreitet werden. |
+| `dist/offline/rksvPrueftoolDesktop-Offline.exe` | Offline-Edition: zusätzlich das BMF-Prüfmodul eingebettet, voll offline. **Nicht öffentlich** – das BMF-Prüfmodul ist ohne Lizenz veröffentlicht; die Veröffentlichung erfolgt erst mit Zustimmung des BMF. |
 | `dist/linux/rksv-prueftool` | Test-Build ohne Fenster: `rksv-prueftool --serve --data <dir>` (nutzt `java` aus dem PATH oder `$RKSV_JAVA`) |
 
 Die Java-Laufzeit (Eclipse Temurin 8u504) und das BMF-Archiv werden mit festen Versionen und SHA-256-Prüfsummen geladen.
@@ -54,7 +54,7 @@ Die Java-Laufzeit (Eclipse Temurin 8u504) und das BMF-Archiv werden mit festen V
 ### Architektur
 ```
 RKSV-Prueftool.exe (Go)
- ├─ eingebettet: Temurin 8 JRE, Oberfläche (HTML) [intern: BMF-Prüfmodul]
+ ├─ eingebettet: Temurin 8 JRE, Oberfläche (HTML) [Offline-Edition: BMF-Prüfmodul]
  ├─ lokaler Dienst auf 127.0.0.1:<zufälliger Port>, geschützt durch ein Sitzungstoken
  ├─ WebView2-Fenster mit der Oberfläche
  └─ java.exe (unsichtbar) -jar regkassen-verification-*.jar …
@@ -110,7 +110,7 @@ scripts/build.sh 0.1.0
 | Output | Contents |
 |---|---|
 | `dist/public/RKSV-Prueftool.exe` | Java runtime embedded; the BMF module is downloaded at first start. **Published.** |
-| `dist/internal/RKSV-Prueftool-intern.exe` | Also embeds the BMF module, fully offline. **Internal only** – the BMF module is published without a license and must not be redistributed. |
+| `dist/offline/rksvPrueftoolDesktop-Offline.exe` | Offline edition: also embeds the BMF module, fully offline. **Not public** – the BMF module is published without a license; it will only be published with the BMF's permission. |
 | `dist/linux/rksv-prueftool` | Headless test build: `rksv-prueftool --serve --data <dir>` (uses `java` from the PATH or `$RKSV_JAVA`) |
 
 The Java runtime (Eclipse Temurin 8u504) and the BMF archive are fetched at pinned versions and verified against SHA-256 checksums.
@@ -118,7 +118,7 @@ The Java runtime (Eclipse Temurin 8u504) and the BMF archive are fetched at pinn
 ### Architecture
 ```
 RKSV-Prueftool.exe (Go)
- ├─ embedded: Temurin 8 JRE, UI (HTML) [internal: BMF module]
+ ├─ embedded: Temurin 8 JRE, UI (HTML) [offline edition: BMF module]
  ├─ local server on 127.0.0.1:<random port>, protected by a session token
  ├─ WebView2 window showing the UI
  └─ java.exe (hidden) -jar regkassen-verification-*.jar …

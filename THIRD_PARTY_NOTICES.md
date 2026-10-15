@@ -22,7 +22,7 @@ At build time, go-winres (MIT, <https://github.com/tc-hib/go-winres>) generates 
 The checks themselves are performed by the official verification tools of the Austrian Federal Ministry of Finance (BMF), published at <https://github.com/BMF-RKSV-Technik/at-registrierkassen-mustercode/releases/tag/V1.1.1>.
 
 - **Public build (`RKSV-Prueftool.exe`):** does **not** contain these tools. On first start, the user downloads `regkassen-verification-1.1.1.zip` from the official release, or selects a copy they downloaded themselves. The app verifies the file against its SHA-256 checksum (`2c1d65b7b0024262e36ebbfba296c47773c68c7000a6f33c36f80b1215e414b6`) before using it unchanged.
-- **Internal build (`RKSV-Prueftool-intern.exe`, `-tags bundled`):** contains that zip unchanged. The BMF publishes the verification core (`regkassen-verification-core`, `regkassen-verification-common`, `regkassen-testdb` 1.0.42) and the command-line tools without a license. The internal build is therefore not published.
+- **Offline edition (`rksvPrueftoolDesktop-Offline.exe`, `-tags bundled`):** contains that zip unchanged. The BMF publishes the verification core (`regkassen-verification-core`, `regkassen-verification-common`, `regkassen-testdb` 1.0.42) and the command-line tools without a license. The offline edition is therefore only published once the BMF permits redistribution.
 
 The zip also contains these libraries:
 

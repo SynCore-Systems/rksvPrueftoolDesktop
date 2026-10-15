@@ -3,7 +3,8 @@
 assets/*.zip
 assets/*.part
 
-# Build output (the internal exe contains the BMF engine - never publish it)
+# Build output (the offline exe contains the BMF engine - only publish it
+# from rksvPrueftoolDesktop-Offline once the BMF permits redistribution)
 dist/
 
 # Generated Windows resources and Go caches

@@ -2,8 +2,9 @@
 # Builds the Windows executables in the official Go Docker image (no local Go
 # toolchain needed):
 #   dist/public/RKSV-Prueftool.exe          JRE embedded, BMF engine downloaded at first start
-#   dist/internal/RKSV-Prueftool-intern.exe JRE and BMF engine embedded (internal use only,
-#                                           the BMF engine is not licensed for redistribution)
+#   dist/offline/rksvPrueftoolDesktop-Offline.exe
+#                                           JRE and BMF engine embedded; not published until the
+#                                           BMF permits redistribution (the engine has no license)
 #   dist/linux/rksv-prueftool               headless test build (--serve), uses system java
 #
 # Usage: scripts/build.sh [VERSION]   (default: 0.0.0-dev)
@@ -45,7 +46,7 @@ fetch "$BMF_ZIP" "$BMF_URL" "$BMF_SHA256"
 # Numeric x.y.z.0 for the Windows version resource.
 WIN_VERSION="$(echo "$VERSION" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' || echo 0.0.0).0"
 
-mkdir -p dist/public dist/internal dist/linux .cache
+mkdir -p dist/public dist/offline dist/linux .cache
 docker run --rm -u "$(id -u):$(id -g)" \
     -e HOME=/tmp -e GOCACHE=/src/.cache/build -e GOMODCACHE=/src/.cache/mod -e GOFLAGS=-trimpath \
     -v "$PWD:/src" -w /src "$GO_IMAGE" bash -euc "
@@ -58,10 +59,10 @@ docker run --rm -u "$(id -u):$(id -g)" \
         GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags \"-H windowsgui \$LDFLAGS\" \
             -o dist/public/RKSV-Prueftool.exe ./cmd/rksv-prueftool
         GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -tags bundled -ldflags \"-H windowsgui \$LDFLAGS\" \
-            -o dist/internal/RKSV-Prueftool-intern.exe ./cmd/rksv-prueftool
+            -o dist/offline/rksvPrueftoolDesktop-Offline.exe ./cmd/rksv-prueftool
         CGO_ENABLED=0 go build -ldflags \"\$LDFLAGS\" -o dist/linux/rksv-prueftool ./cmd/rksv-prueftool
     "
 
 echo
-ls -lh dist/public/RKSV-Prueftool.exe dist/internal/RKSV-Prueftool-intern.exe dist/linux/rksv-prueftool
-sha256sum dist/public/RKSV-Prueftool.exe dist/internal/RKSV-Prueftool-intern.exe
+ls -lh dist/public/RKSV-Prueftool.exe dist/offline/rksvPrueftoolDesktop-Offline.exe dist/linux/rksv-prueftool
+sha256sum dist/public/RKSV-Prueftool.exe dist/offline/rksvPrueftoolDesktop-Offline.exe
