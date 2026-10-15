@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RKSV Web Prüftool</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; margin-bottom: 10px; }
+        .subtitle { color: #666; margin-bottom: 30px; font-size: 14px; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 2px solid #e0e0e0; flex-wrap: wrap; }
+        .tab { padding: 12px 24px; cursor: pointer; border: none; background: none; font-size: 16px; color: #666; border-bottom: 3px solid transparent; }
+        .tab:hover { color: #0066cc; }
+        .tab.active { color: #0066cc; border-bottom-color: #0066cc; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .form-group { margin-bottom: 25px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; }
+        .file-input-wrapper { position: relative; overflow: hidden; }
+        .file-input-wrapper input[type=file] { position: absolute; left: -9999px; }
+        .file-label { display: block; padding: 15px; background: #f9f9f9; border: 2px dashed #ccc; border-radius: 6px; text-align: center; cursor: pointer; }
+        .file-label:hover { background: #f0f0f0; border-color: #0066cc; }
+        .file-name { margin-top: 8px; font-size: 13px; color: #666; }
+        input[type=text], textarea, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: Arial, sans-serif; font-size: 14px; background: white; }
+        input[type=text]:focus, textarea:focus, select:focus { outline: none; border-color: #0066cc; box-shadow: 0 0 5px rgba(0, 102, 204, 0.3); }
+        textarea { resize: vertical; min-height: 80px; font-family: monospace; }
+        button[type=submit], .btn { padding: 12px; background: #0066cc; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+        button[type=submit]:hover, .btn:hover { background: #0052a3; }
+        button[type=submit] { width: 100%; }
+        button[type=submit]:disabled { background: #999; cursor: wait; }
+        .result { margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 6px; display: none; }
+        .result.show { display: block; }
+        .result.success { background: #d4edda; border: 1px solid #c3e6cb; }
+        .result.error { background: #f8d7da; border: 1px solid #f5c6cb; }
+        .result.warn { background: #fff3cd; border: 1px solid #ffeeba; }
+        .result h3 { margin-bottom: 15px; }
+        .result-stats { margin-bottom: 15px; font-size: 14px; color: #666; }
+        .reason { margin-bottom: 15px; padding: 12px 15px; border-radius: 4px; font-size: 14px; line-height: 1.5; background: rgba(0,0,0,0.03); border-left: 4px solid #888; }
+        .reason.reason-fail { border-left-color: #dc3545; }
+        .reason.reason-pass { border-left-color: #28a745; }
+        .reason ul { margin: 6px 0 0 20px; }
+        .reason .tz-hint { display: block; margin-top: 8px; font-weight: bold; color: #8a6d3b; }
+        .output { background: white; padding: 15px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 400px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; border: 1px solid #ddd; }
+        .result-actions { margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn { display: inline-flex; padding: 10px 15px; border-radius: 6px; font-weight: bold; text-decoration: none; font-size: 14px; align-items: center; gap: 8px; }
+        .download-btn { background: #28a745; color: white; }
+        .download-btn:hover { background: #218838; }
+        .log-btn { background: #17a2b8; color: white; }
+        .log-btn:hover { background: #138496; }
+        .pagination { margin-top: 15px; text-align: center; }
+        .pagination button { padding: 8px 12px; margin: 0 5px; background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .pagination button:hover { background: #0052a3; }
+        .pagination button:disabled { background: #ccc; cursor: not-allowed; }
+        .pagination-info { margin-top: 10px; font-size: 13px; color: #666; }
+        .loading { text-align: center; padding: 20px; display: none; }
+        .loading.show { display: block; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #0066cc; border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; margin: 0 auto 15px; }
+        .spinner-small { border: 2px solid #f3f3f3; border-top: 2px solid currentColor; border-radius: 50%; width: 16px; height: 16px; animation: spin 2s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .history-list { list-style: none; }
+        .history-item { padding: 15px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px; }
+        .history-item-meta { font-size: 13px; color: #666; margin-bottom: 8px; }
+        .history-item-reason { font-size: 13px; color: #444; margin-bottom: 8px; }
+        .history-item-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .cleanup-btn { background: #dc3545; color: white; }
+        .cleanup-btn:hover { background: #c82333; }
+        .cleanup-section { margin-top: 30px; padding-top: 20px; border-top: 2px solid #e0e0e0; }
+        .crypto-section { background: #f0f8ff; padding: 15px; border-radius: 6px; border-left: 4px solid #0066cc; margin-bottom: 20px; }
+        .crypto-divider { text-align: center; margin: 15px 0; color: #666; }
+        .setup-panel { display: none; margin-bottom: 25px; padding: 20px; border-radius: 6px; background: #fff3cd; border: 1px solid #ffeeba; line-height: 1.6; }
+        .setup-panel.show { display: block; }
+        .setup-panel.error { background: #f8d7da; border-color: #f5c6cb; }
+        .setup-panel h3 { margin-bottom: 10px; }
+        .setup-panel p { margin-bottom: 10px; font-size: 14px; }
+        .setup-panel .setup-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 15px; }
+        .setup-panel .setup-busy { display: flex; gap: 12px; align-items: center; }
+        .setup-panel .spinner { margin: 0; width: 28px; height: 28px; border-width: 3px; }
+        .setup-panel code { background: rgba(0,0,0,0.06); padding: 1px 4px; border-radius: 3px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        @media (max-width: 600px) {
+            .form-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+	            <h1><svg xmlns="http://www.w3.org/2000/svg" width="40" height="25" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 39.06 27.17"><g fill-rule="nonzero"><path fill="#ED2939" d="M2.15 0h34.76c1.18 0 2.15.97 2.15 2.15v6.82H0V2.15C0 .97.97 0 2.15 0zm36.91 18.2v6.82c0 1.18-.97 2.15-2.15 2.15H2.15A2.16 2.16 0 0 1 0 25.02V18.2h39.06z"/><path fill="#fff" d="M0 8.97h39.06v9.23H0z"/></g></svg> RKSV Prüftool</h1>
+
+        <p class="subtitle">Desktop</p>
+
+        <div class="setup-panel" id="setup-panel"></div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('dep', this)">DEP-Export</button>
+            <button class="tab" onclick="switchTab('receipts', this)">QR-Code</button>
+            <button class="tab" onclick="switchTab('history', this)">Verlauf</button>
+            <button class="tab" onclick="switchTab('about', this)">Über</button>
+        </div>
+
+        <div id="dep-tab" class="tab-content active">
+            <form id="dep-form" onsubmit="submitDep(event)">
+                <div class="form-group">
+                    <label>DEP-Export JSON</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="dep-file" name="depFile" accept=".json">
+                        <label for="dep-file" class="file-label">
+                            Datei auswählen
+                            <div class="file-name" id="dep-file-name"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="crypto-section">
+                    <div class="form-group">
+                        <label>Kryptographisches Material (JSON)</label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="dep-crypto-file" name="cryptoFile" accept=".json">
+                            <label for="dep-crypto-file" class="file-label">
+                                Datei auswählen
+                                <div class="file-name" id="dep-crypto-file-name"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="crypto-divider">— oder Daten eingeben —</div>
+
+                    <div class="form-group">
+                        <label>Base64 AES Key</label>
+                        <textarea id="dep-base64key" placeholder="z.B. AEQ3FvhDAFDXcGxVe4gE3en8Q3yWvqUG2WxmPe3Y="></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>ID</label>
+                            <input type="text" id="dep-id" placeholder="z.B. 052FF33A">
+                        </div>
+                        <div class="form-group">
+                            <label>Signature Device Type</label>
+                            <input type="text" id="dep-sig-type" placeholder="CERTIFICATE" value="CERTIFICATE">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Signature Certificate or Public Key</label>
+                        <textarea id="dep-cert" placeholder="Base64 encoded certificate..."></textarea>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Zeitzone der Belegerstellung</label>
+                    <select id="dep-timezone" name="timezone">
+                        <option value="Europe/Vienna" selected>Europe/Vienna (Österreich)</option>
+                        <option value="Europe/Berlin">Europe/Berlin</option>
+                        <option value="Europe/Zurich">Europe/Zurich</option>
+                        <option value="Europe/Bratislava">Europe/Bratislava</option>
+                        <option value="Europe/Budapest">Europe/Budapest</option>
+                        <option value="Europe/Prague">Europe/Prague</option>
+                        <option value="Europe/Rome">Europe/Rome</option>
+                        <option value="Europe/Ljubljana">Europe/Ljubljana</option>
+                        <option value="Europe/London">Europe/London</option>
+                        <option value="UTC">UTC</option>
+                    </select>
+                </div>
+
+                <button type="submit">Prüfen</button>
+            </form>
+
+            <div class="loading" id="dep-loading">
+                <div class="spinner"></div>
+                <p>Wird geprüft...</p>
+            </div>
+
+            <div class="result" id="dep-result"></div>
+        </div>
+
+        <div id="receipts-tab" class="tab-content">
+            <form id="receipts-form" onsubmit="submitReceipts(event)">
+                <div class="form-group">
+                    <label>QR-Code JSON Datei</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="qr-file" name="qrFile" accept=".json">
+                        <label for="qr-file" class="file-label">
+                            Datei auswählen
+                            <div class="file-name" id="qr-file-name"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="crypto-divider">— oder QR-Code String eingeben —</div>
+
+                <div class="form-group">
+                    <label>QR-Code String(s) – ein Code pro Zeile</label>
+                    <textarea id="qr-string" name="qrString" placeholder='z.B. _R1-AT1_011_9813_2025-08-11T14:01:42_0,00_0,00_0,00_0,00_0,00_F453uNVJGu4=_75C93251_iggM6oCdG50=_yAoU+sU0Iv7MMweUzbD2LI1d38jOJcBxvJZ8ipyYgsvfEdI3ONrurzV8tZEQgjAYX2/OP5aCznr2ebI4euB8Ww=='></textarea>
+                </div>
+
+                <div class="crypto-section">
+                    <div class="form-group">
+                        <label>Kryptographisches Material (JSON)</label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="qr-crypto-file" name="cryptoFile" accept=".json">
+                            <label for="qr-crypto-file" class="file-label">
+                                Datei auswählen
+                                <div class="file-name" id="qr-crypto-file-name"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="crypto-divider">— oder Daten eingeben —</div>
+
+                    <div class="form-group">
+                        <label>Base64 AES Key</label>
+                        <textarea id="qr-base64key" name="base64key" placeholder="z.B. AEQ3FvhDAFDXcGxVe4gE3en8Q3yWvqUG2WxmPe3Y="></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>ID</label>
+                            <input type="text" id="qr-id" name="id" placeholder="z.B. 052FF33A">
+                        </div>
+                        <div class="form-group">
+                            <label>Signature Device Type</label>
+                            <input type="text" id="qr-sig-type" name="sigType" placeholder="CERTIFICATE" value="CERTIFICATE">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Signature Certificate or Public Key</label>
+                        <textarea id="qr-cert" name="cert" placeholder="Base64 encoded certificate..."></textarea>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Zeitzone der Belegerstellung</label>
+                    <select id="qr-timezone" name="timezone">
+                        <option value="Europe/Vienna" selected>Europe/Vienna (Österreich)</option>
+                        <option value="Europe/Berlin">Europe/Berlin</option>
+                        <option value="Europe/Zurich">Europe/Zurich</option>
+                        <option value="Europe/Bratislava">Europe/Bratislava</option>
+                        <option value="Europe/Budapest">Europe/Budapest</option>
+                        <option value="Europe/Prague">Europe/Prague</option>
+                        <option value="Europe/Rome">Europe/Rome</option>
+                        <option value="Europe/Ljubljana">Europe/Ljubljana</option>
+                        <option value="Europe/London">Europe/London</option>
+                        <option value="UTC">UTC</option>
+                    </select>
+                </div>
+
+                <button type="submit">Prüfen</button>
+            </form>
+
+            <div class="loading" id="qr-loading">
+                <div class="spinner"></div>
+                <p>Wird geprüft...</p>
+            </div>
+
+            <div class="result" id="qr-result"></div>
+        </div>
+
+        <div id="history-tab" class="tab-content">
+            <h2>Verlauf</h2>
+            <p style="margin-bottom: 20px; font-size: 14px; color: #666;">Alle bisherigen Prüfungen</p>
+            
+            <button class="btn" onclick="loadHistory()" style="width: 100%; justify-content: center;">Aktualisieren</button>
+            
+            <ul class="history-list" id="history-list"></ul>
+            
+            <div class="cleanup-section">
+                <button class="btn cleanup-btn" onclick="cleanupData()" style="width: 100%; justify-content: center;">Alle Daten löschen</button>
+            </div>
+        </div>
+
+        <div id="about-tab" class="tab-content">
+            <h2>Über dieses Tool</h2>
+            
+            <h3 style="margin-top: 20px; color: #333;">Was ist RKSV Prüftool?</h3>
+            <p style="line-height: 1.6; color: #555; margin-top: 10px;">
+                RKSV Prüftool ist eine <strong>Desktop-Anwendung</strong>, die den Zugang zu den offiziellen 
+                Validierungswerkzeugen des Bundesministeriums für Finanzen (BMF) Österreich vereinfacht. 
+                Dieses Tool führt selbst keine Validierung durch, sondern nutzt die zertifizierten BMF-Validierungsbibliotheken 
+                zur Überprüfung von DEP-Exporten und QR-Code-Belegen nach der österreichischen Registrierkassen-Sicherheitsverordnung (RKSV).
+            </p>
+
+            <h3 style="margin-top: 20px; color: #333;">Was macht dieses Interface?</h3>
+            <div style="line-height: 1.8; color: #555; margin-top: 10px;">
+                <p>Dieses Tool bietet eine benutzerfreundliche Oberfläche für:</p>
+                <ul style="margin-left: 20px; margin-top: 8px;">
+                    <li>Einfaches Hochladen von DEP-Export und QR-Code Dateien</li>
+                    <li>Verwaltung von kryptographischen Materialien (als Datei oder manuelle Eingabe)</li>
+                    <li>Automatisches Starten der BMF-Validierungsprozesse</li>
+                    <li>Übersichtliche Darstellung von Validierungsergebnissen</li>
+                    <li>Download von detaillierten Prüfberichten und Logs</li>
+                    <li>Verwaltung des Validierungsverlaufs</li>
+                </ul>
+            </div>
+
+            <h3 style="margin-top: 20px; color: #333;">Die tatsächliche Validierung</h3>
+            <div style="background: #f9f9f9; padding: 15px; border-radius: 6px; border-left: 4px solid #28a745; margin-top: 10px;">
+                <p style="line-height: 1.6; color: #555; margin: 0;">
+                    Die <strong>eigentliche Validierung wird durchgeführt von</strong> den offiziellen BMF-RKSV-Validierungsbibliotheken:
+                </p>
+                <ul style="margin-left: 20px; margin-top: 12px; color: #555;">
+                    <li><strong>DEP-Validierung:</strong> regkassen-verification-depformat-1.1.1.jar</li>
+                    <li><strong>QR-Code-Validierung:</strong> regkassen-verification-receipts-1.1.1.jar</li>
+                </ul>
+                <p style="margin-top: 12px; margin-bottom: 0; color: #666; font-size: 13px;">
+                    Diese Komponenten werden vom BMF-RKSV-Technik-Team entwickelt und gewartet. 
+                    Dieses Interface dient nur als Wrapper zur vereinfachten Nutzung.
+                    Das Prüfmodul wird vom offiziellen GitHub-Release des BMF bezogen und vor der Verwendung
+                    anhand seiner SHA-256-Prüfsumme auf Unverändertheit geprüft.
+                </p>
+            </div>
+
+            <h3 style="margin-top: 25px; color: #333;">Technische Architektur</h3>
+            <div style="line-height: 1.8; color: #555; margin-top: 10px;">
+                <p><strong>Benutzeroberfläche:</strong></p>
+                <ul style="margin-left: 20px; margin-top: 8px;">
+                    <li>HTML5 / CSS3 / JavaScript (Vanilla)</li>
+                    <li>Angezeigt in einem Microsoft-Edge-WebView2-Fenster</li>
+                </ul>
+
+                <p style="margin-top: 15px;"><strong>Programm:</strong></p>
+                <ul style="margin-left: 20px; margin-top: 8px;">
+                    <li>Go, lokaler Dienst – nur auf diesem Rechner erreichbar</li>
+                    <li>Mitgelieferte Java-8-Laufzeitumgebung (Eclipse Temurin), keine Java-Installation nötig</li>
+                </ul>
+
+                <p style="margin-top: 15px;"><strong>Validierungs-Engine:</strong></p>
+                <ul style="margin-left: 20px; margin-top: 8px;">
+                    <li>Java-basierte BMF-Validierungsbibliotheken</li>
+                    <li>Ausführung: <code>java -Xmx2g -Duser.timezone=&lt;zeitzone&gt; -jar regkassen-verification-*.jar -v -f -i &lt;input&gt; -c &lt;crypto&gt; -o &lt;output&gt;</code></li>
+                </ul>
+            </div>
+
+            <h3 style="margin-top: 25px; color: #333;">Danksagungen und Attribution</h3>
+            <div style="background: #e8f5e9; padding: 15px; border-radius: 6px; border-left: 4px solid #2e7d32; margin-top: 10px;">
+                <p style="line-height: 1.6; color: #555; margin: 0;">
+                    <strong>Dieses Interface würde nicht existieren ohne die Arbeit des BMF-RKSV-Technik-Teams.</strong><br>
+                    <br>
+                    Die Validierungsbibliotheken und der offizielle Mustercode sind im folgenden GitHub-Repository verfügbar:
+                </p>
+                <p style="margin-top: 12px; margin-bottom: 0;">
+                    <a href="https://github.com/BMF-RKSV-Technik/at-registrierkassen-mustercode" target="_blank" style="color: #0066cc; text-decoration: none; font-weight: bold;">
+                        🔗 BMF-RKSV-Technik/at-registrierkassen-mustercode
+                    </a>
+                </p>
+            </div>
+
+            <h3 style="margin-top: 25px; color: #333;">Lizenz und Haftungsausschluss</h3>
+            <div style="background: #f0f8ff; padding: 15px; border-radius: 6px; border-left: 4px solid #0066cc; margin-top: 10px;">
+                <p style="line-height: 1.6; color: #555; margin: 0;">
+		<img src="/static/SynCore_Logo.png" alt="SynCore Logo" width="100" height="100"><br>
+		    Dieses Tool wurde von SynCore Systems entwickelt und bereitgestellt.<br> 
+		    <a href="https://www.SynCore.at">https://www.SynCore.at</a><br><br> 
+                    <strong>Lizenz:</strong> Dieses Interface ist unter der 
+                    <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" style="color: #0066cc; text-decoration: none;">Apache License 2.0</a>
+                    veröffentlicht.<br>
+                    <br>
+                    <strong>Haftungsausschluss:</strong> Dieses Interface wird ohne jegliche Garantie bereitgestellt. 
+                    Der Autor übernimmt keine Haftung für Fehler oder Datenverluste. Die Validierungsergebnisse hängen 
+                    von den zugrundeliegenden BMF-Validierungsbibliotheken ab. <strong>Es liegt in Ihrer Verantwortung, 
+                    die Ergebnisse zu überprüfen</strong> und sicherzustellen, dass diese den gesetzlichen Anforderungen entsprechen.
+                </p>
+            </div>
+
+            <h3 style="margin-top: 25px; color: #333;">Datenschutz und Datenspeicherung</h3>
+            <p style="line-height: 1.6; color: #555; margin-top: 10px;">
+                Alle geprüften Dateien und Validierungsergebnisse werden ausschließlich lokal auf diesem Rechner gespeichert
+                (<code>%LOCALAPPDATA%\SynCore\RKSV-Prueftool</code>). Es werden keine Daten übertragen – mit Ausnahme
+                des einmaligen Downloads des BMF-Prüfmoduls von GitHub.
+                Die Daten können jederzeit gelöscht werden (siehe "Alle Daten löschen" im Verlauf-Tab).
+                Die maximale Dateigröße beträgt 2 GB.
+            </p>
+        </div>
+
+    </div>
+    <script>
+        const PREVIEW_LINES = 100;
+        const linesPerPage = 1000;
+        // Per result panel ('dep' / 'qr'): job whose log is shown and next line to load.
+        const logState = {};
+        let downloadingZips = new Set();
+
+        // ---- Setup: Java runtime + BMF engine (see /api/status) ----
+        let appReady = false;
+
+        function setFormsEnabled(enabled) {
+            document.querySelectorAll('form button[type=submit]').forEach(b => {
+                if (!b.dataset.busy) b.disabled = !enabled;
+            });
+        }
+
+        function renderSetup(status) {
+            const panel = document.getElementById('setup-panel');
+            const rt = status.runtime || {}, en = status.engine || {};
+            panel.classList.remove('error');
+            if (status.ready) {
+                panel.classList.remove('show');
+                panel.innerHTML = '';
+                return;
+            }
+            panel.classList.add('show');
+            const busy = text => '<div class="setup-busy"><div class="spinner"></div><span>' + text + '</span></div>';
+
+            if (rt.state === 'error') {
+                panel.classList.add('error');
+                panel.innerHTML = '<h3>✗ Java-Laufzeitumgebung konnte nicht vorbereitet werden</h3><p>' + escapeHtml(rt.error) + '</p>';
+                return;
+            }
+            if (en.state === 'installing') {
+                panel.innerHTML = busy('BMF-Prüfmodul wird installiert…');
+                return;
+            }
+            if (en.state === 'missing' || en.state === 'error') {
+                if (en.state === 'error') panel.classList.add('error');
+                let html = '<h3>BMF-Prüfmodul einrichten</h3>';
+                if (en.state === 'error') {
+                    html += '<p><strong>Fehler:</strong> ' + escapeHtml(en.error) + '</p>';
+                }
+                html += '<p>Die eigentliche Prüfung erfolgt durch das offizielle Prüfmodul des Bundesministeriums für Finanzen ' +
+                        '(Version ' + escapeHtml(en.version) + '). Es wird einmalig vom ' +
+                        '<a href="' + escapeHtml(en.releaseUrl) + '" target="_blank">offiziellen GitHub-Release des BMF</a> ' +
+                        'heruntergeladen und anhand seiner Prüfsumme verifiziert.</p>' +
+                        '<p>Ohne Internetzugang: Datei <code>' + escapeHtml(en.zipName) + '</code> auf einem anderen Rechner herunterladen ' +
+                        'und hier auswählen.</p>' +
+                        '<div class="setup-actions">' +
+                        '<button class="btn" onclick="downloadEngine()">⬇ Prüfmodul herunterladen</button>' +
+                        '<label class="btn log-btn" for="engine-zip" style="margin: 0; font-weight: bold; color: white;">📁 ZIP-Datei auswählen</label>' +
+                        '<input type="file" id="engine-zip" accept=".zip" style="display: none;" onchange="importEngine(this)">' +
+                        '</div>';
+                if (rt.state !== 'ready') html += '<p style="margin-top: 15px;">' + busy('Java-Laufzeitumgebung wird vorbereitet…') + '</p>';
+                panel.innerHTML = html;
+                return;
+            }
+            panel.innerHTML = busy(rt.state !== 'ready'
+                ? 'Erster Start: Java-Laufzeitumgebung wird vorbereitet…'
+                : 'Prüfmodul wird geladen…');
+        }
+
+        async function refreshStatus() {
+            try {
+                const { data } = await fetchJson('/api/status');
+                if (data.error) throw new Error(data.error);
+                appReady = !!data.ready;
+                renderSetup(data);
+                setFormsEnabled(appReady);
+                const en = data.engine || {}, rt = data.runtime || {};
+                const waiting = rt.state === 'preparing' || en.state === 'preparing' || en.state === 'installing';
+                if (!appReady && waiting) setTimeout(refreshStatus, 1000);
+            } catch (err) {
+                setTimeout(refreshStatus, 2000);
+            }
+        }
+
+        async function downloadEngine() {
+            renderSetup({ runtime: { state: 'ready' }, engine: { state: 'installing' } });
+            const poll = setTimeout(refreshStatus, 1000);
+            const { data } = await fetchJson('/api/engine/download', { method: 'POST' });
+            clearTimeout(poll);
+            if (data.error) alert(data.error);
+            refreshStatus();
+        }
+
+        async function importEngine(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const form = new FormData();
+            form.append('engineZip', file);
+            renderSetup({ runtime: { state: 'ready' }, engine: { state: 'installing' } });
+            const { data } = await fetchJson('/api/engine/import', { method: 'POST', body: form });
+            if (data.error) alert(data.error);
+            refreshStatus();
+        }
+
+        // Open links to other sites in the default browser, not in the app window.
+        document.addEventListener('click', e => {
+            const a = e.target.closest && e.target.closest('a[href^="http"]');
+            if (!a) return;
+            e.preventDefault();
+            fetchJson('/api/open-external', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: a.href })
+            });
+        });
+
+        function switchTab(tab, el) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById(tab + '-tab').classList.add('active');
+
+            if (tab === 'history') {
+                loadHistory();
+            }
+        }
+
+        document.getElementById('dep-crypto-file')?.addEventListener('change', function() {
+            document.getElementById('dep-crypto-file-name').textContent = this.files[0]?.name || '';
+        });
+
+        document.getElementById('dep-file')?.addEventListener('change', function() {
+            document.getElementById('dep-file-name').textContent = this.files[0]?.name || '';
+        });
+
+        document.getElementById('qr-file')?.addEventListener('change', function() {
+            document.getElementById('qr-file-name').textContent = this.files[0]?.name || '';
+        });
+
+        document.getElementById('qr-crypto-file')?.addEventListener('change', function() {
+            document.getElementById('qr-crypto-file-name').textContent = this.files[0]?.name || '';
+        });
+
+        // Remember the chosen timezone across page loads and keep both tabs in sync.
+        (function() {
+            const TZ_KEY = 'rksv-tz';
+            const selects = ['dep-timezone', 'qr-timezone'].map(id => document.getElementById(id)).filter(Boolean);
+            let saved = null;
+            try { saved = localStorage.getItem(TZ_KEY); } catch (e) {}
+            selects.forEach(el => {
+                if (saved && [...el.options].some(o => o.value === saved)) el.value = saved;
+                el.addEventListener('change', () => {
+                    try { localStorage.setItem(TZ_KEY, el.value); } catch (e) {}
+                    selects.forEach(other => { if (other !== el) other.value = el.value; });
+                });
+            });
+        })();
+
+        // fetch() + JSON that never throws on non-JSON bodies (e.g. a proxy's
+        // HTML 502/504 page); returns {res, data} with data.error set on failure.
+        async function fetchJson(url, options) {
+            const res = await fetch(url, options);
+            let data;
+            try {
+                data = await res.json();
+            } catch (e) {
+                const hints = { 413: 'Datei zu groß', 502: 'Server nicht erreichbar', 503: 'Server ausgelastet', 504: 'Zeitüberschreitung' };
+                data = { error: 'HTTP ' + res.status + (hints[res.status] ? ' – ' + hints[res.status] : '') };
+            }
+            if (!res.ok && !data.error) data.error = 'HTTP ' + res.status;
+            return { res, data };
+        }
+
+        async function runVerification(type, url, form, submitBtn) {
+            if (!appReady) {
+                alert('Das Prüfmodul ist noch nicht bereit.');
+                return;
+            }
+            const loading = document.getElementById(type + '-loading');
+            submitBtn.disabled = true;
+            submitBtn.dataset.busy = '1';
+            loading.classList.add('show');
+            document.getElementById(type + '-result').classList.remove('show');
+
+            try {
+                const { res, data } = await fetchJson(url, { method: 'POST', body: form });
+                showResult(type, data, res.ok);
+            } catch (err) {
+                showResult(type, { error: err.message }, false);
+            } finally {
+                loading.classList.remove('show');
+                delete submitBtn.dataset.busy;
+                submitBtn.disabled = !appReady;
+            }
+        }
+
+        async function submitDep(e) {
+            e.preventDefault();
+            const depFile = document.getElementById('dep-file').files[0];
+            if (!depFile) {
+                alert('Bitte wählen Sie eine DEP-Export Datei aus');
+                return;
+            }
+
+            const form = new FormData();
+            form.append('depFile', depFile);
+            form.append('timezone', document.getElementById('dep-timezone').value);
+
+            const cryptoFile = document.getElementById('dep-crypto-file').files[0];
+            if (cryptoFile) {
+                form.append('cryptoFile', cryptoFile);
+            } else {
+                const cryptoData = buildCryptoJson('dep');
+                if (cryptoData) {
+                    form.append('cryptoData', JSON.stringify(cryptoData));
+                } else {
+                    alert('Bitte geben Sie entweder eine Crypto-Datei ein oder füllen Sie alle erforderlichen Felder aus');
+                    return;
+                }
+            }
+
+            await runVerification('dep', '/api/verify/dep', form, e.submitter || e.target.querySelector('button[type=submit]'));
+        }
+
+        async function submitReceipts(e) {
+            e.preventDefault();
+            await runVerification('qr', '/api/verify/receipts', new FormData(e.target),
+                                  e.submitter || e.target.querySelector('button[type=submit]'));
+        }
+
+        function buildCryptoJson(type) {
+            const prefix = type === 'dep' ? 'dep' : 'qr';
+            const base64key = document.getElementById(prefix + '-base64key').value.trim();
+            const id = document.getElementById(prefix + '-id').value.trim();
+            const sigType = document.getElementById(prefix + '-sig-type').value.trim();
+            const cert = document.getElementById(prefix + '-cert').value.trim();
+            
+            if (!base64key || !id || !sigType || !cert) {
+                return null;
+            }
+            
+            return {
+                base64AESKey: base64key,
+                certificateOrPublicKeyMap: {
+                    [id]: {
+                        id: id,
+                        signatureDeviceType: sigType,
+                        signatureCertificateOrPublicKey: cert
+                    }
+                }
+            };
+        }
+
+        function reasonList(data) {
+            if (Array.isArray(data.reasons) && data.reasons.length) return data.reasons;
+            return data.reason ? [data.reason] : [];
+        }
+
+        function showResult(type, data, ok) {
+            const div = document.getElementById(type + '-result');
+            div.classList.add('show');
+
+            // Colour is driven by the real RKSV verdict, not just the exit code.
+            // status: 'error' (tool/HTTP error) | 'pass' | 'fail' | 'unknown'
+            const hasError = !ok || !!data.error;
+            const status = hasError ? 'error' : (data.verdict || 'unknown');
+            const cls = status === 'pass' ? 'success' : (status === 'unknown' ? 'warn' : 'error');
+            div.classList.remove('success', 'error', 'warn');
+            div.classList.add(cls);
+
+            const headers = {
+                pass: '✓ Prüfung bestanden',
+                fail: '✗ Prüfung fehlgeschlagen',
+                error: '✗ Fehler',
+                unknown: '⚠ Abgeschlossen – Ergebnis unklar'
+            };
+            let html = '<h3>' + headers[status] + '</h3>';
+
+            if (data.error) {
+                html += '<p>' + escapeHtml(data.error) + '</p>';
+            } else if (ok) {
+                logState[type] = { jobId: data.jobId, nextStart: PREVIEW_LINES };
+                
+                html += '<div class="result-stats">';
+                html += 'Exit Code: ' + data.exitCode + ' | ';
+                html += 'Zeilen: ' + data.lines + ' | ';
+                html += 'Zeichen: ' + data.chars;
+                if (data.timezone) { html += ' | Zeitzone: ' + escapeHtml(data.timezone); }
+                html += '</div>';
+
+                const reasons = reasonList(data);
+                if (reasons.length) {
+                    const reasonCls = status === 'pass' ? 'reason-pass' : (status === 'fail' ? 'reason-fail' : '');
+                    let reasonHtml = reasons.length === 1
+                        ? escapeHtml(reasons[0])
+                        : 'Fehlerursachen:<ul>' + reasons.map(r => '<li>' + escapeHtml(r) + '</li>').join('') + '</ul>';
+                    // Future-dated receipt → the failure is usually a timezone mismatch.
+                    if (status === 'fail' && /zukunft|zukünftig|future/i.test((data.preview || '') + ' ' + reasons.join(' '))) {
+                        reasonHtml += '<span class="tz-hint">Hinweis: Der Beleg wirkt in der Zukunft erstellt — prüfen Sie die gewählte Zeitzone.</span>';
+                    }
+                    html += '<div class="reason ' + reasonCls + '">' + reasonHtml + '</div>';
+                }
+
+                html += '<div class="output">' + escapeHtml(data.preview) + '</div>';
+                
+                if (data.lines > PREVIEW_LINES) {
+                    html += '<div class="pagination">';
+                    html += '<button onclick="loadNextPage(\'' + type + '\')">Weitere laden</button>';
+                    html += '<div class="pagination-info">Zeige Zeilen 1-' + PREVIEW_LINES + ' von ' + data.lines + '</div>';
+                    html += '</div>';
+                }
+                
+                html += '<div class="result-actions">';
+                if (data.downloadUrl) {
+                    html += '<button class="btn download-btn" onclick="downloadZip(\'' + data.jobId + '\')"><span id="zip-icon-' + data.jobId + '">📦</span> Download ZIP</button>';
+                }
+                if (data.logUrl) {
+                    html += '<a href="' + data.logUrl + '" class="btn log-btn">📄 Download Log</a>';
+                }
+                html += '</div>';
+            }
+            
+            div.innerHTML = html;
+        }
+
+        function downloadZip(jobId, iconId) {
+            if (downloadingZips.has(jobId)) return;
+
+            downloadingZips.add(jobId);
+            const iconEl = document.getElementById(iconId || 'zip-icon-' + jobId);
+            if (iconEl) {
+                iconEl.innerHTML = '<span class="spinner-small"></span>';
+            }
+
+            setTimeout(() => { window.location.href = '/api/download/' + jobId; }, 100);
+            setTimeout(() => {
+                downloadingZips.delete(jobId);
+                if (iconEl) iconEl.innerHTML = '📦';
+            }, 5000);
+        }
+
+        async function loadNextPage(type) {
+            const state = logState[type];
+            if (!state) return;
+
+            const resultDiv = document.getElementById(type + '-result');
+            const url = `/api/log/${state.jobId}/page?start=${state.nextStart}&limit=${linesPerPage}`;
+            
+            try {
+                const { data } = await fetchJson(url);
+                
+                if (data.error) {
+                    alert('Fehler: ' + data.error);
+                    return;
+                }
+                
+                const outputDiv = resultDiv.querySelector('.output');
+                if (outputDiv) {
+                    outputDiv.textContent += '\n\n--- Zeilen ' + (data.start + 1) + '-' + data.end + ' ---\n\n';
+                    outputDiv.textContent += data.chunk;
+                    outputDiv.scrollTop = outputDiv.scrollHeight;
+                }
+                
+                state.nextStart = data.end;
+                
+                const paginationDiv = resultDiv.querySelector('.pagination');
+                if (paginationDiv) {
+                    if (data.end >= data.total) {
+                        paginationDiv.innerHTML = '<div class="pagination-info">Alle ' + data.total + ' Zeilen geladen</div>';
+                    } else {
+                        paginationDiv.innerHTML = '<button onclick="loadNextPage(\'' + type + '\')">Weitere laden</button><div class="pagination-info">Zeige Zeilen 1-' + data.end + ' von ' + data.total + '</div>';
+                    }
+                }
+            } catch (err) {
+                alert('Fehler beim Laden: ' + err.message);
+            }
+        }
+
+        // Timestamps without an offset were written in container time (UTC).
+        function parseTimestamp(ts) {
+            if (!ts) return null;
+            const hasOffset = /([zZ]|[+-]\d{2}:?\d{2})$/.test(ts);
+            const d = new Date(hasOffset ? ts : ts + 'Z');
+            return isNaN(d) ? null : d;
+        }
+
+        async function loadHistory() {
+            try {
+                const { data } = await fetchJson('/api/jobs');
+                if (data.error) {
+                    alert('Fehler beim Laden: ' + data.error);
+                    return;
+                }
+
+                const list = document.getElementById('history-list');
+                list.innerHTML = '';
+
+                if (data.jobs.length === 0) {
+                    list.innerHTML = '<li style="padding: 15px; text-align: center; color: #999;">Keine Einträge</li>';
+                    return;
+                }
+
+                data.jobs.forEach(job => {
+                    const date = parseTimestamp(job.timestamp);
+                    const dateStr = date ? date.toLocaleString('de-AT') : '–';
+                    const fileName = escapeHtml(job.inputFile || job.depFile || job.qrFile || '');
+                    const verdict = job.verdict || (job.exitCode === 0 ? 'unknown' : 'error');
+                    const statusStr = {
+                        pass: '✓ Bestanden',
+                        fail: '✗ Fehlgeschlagen',
+                        error: '✗ Fehler',
+                        unknown: '⚠ Unklar'
+                    }[verdict] || '⚠ Unklar';
+                    const borderColor = {
+                        pass: '#28a745', fail: '#dc3545', error: '#dc3545', unknown: '#ffc107'
+                    }[verdict] || '#ddd';
+                    const safeId = escapeHtml(job.jobId);
+                    const typeStr = escapeHtml(String(job.type || '?').toUpperCase());
+                    const linesStr = Number.isFinite(job.lines) ? ' | ' + job.lines + ' Zeilen' : '';
+                    const tzStr = job.timezone ? ' | ' + escapeHtml(job.timezone) : '';
+                    const reasons = reasonList(job);
+                    const reasonHtml = (verdict === 'fail' || verdict === 'error') && reasons.length
+                        ? `<div class="history-item-reason">${escapeHtml(reasons[0])}${reasons.length > 1 ? ' (+' + (reasons.length - 1) + ' weitere)' : ''}</div>`
+                        : '';
+
+                    const li = document.createElement('li');
+                    li.className = 'history-item';
+                    li.style.borderLeft = '4px solid ' + borderColor;
+                    li.innerHTML = `
+                        <div class="history-item-meta">
+                            <strong>${escapeHtml(dateStr)}</strong> | ${typeStr} | ${statusStr}${linesStr}${tzStr}
+                        </div>
+                        <div style="font-size: 13px; color: #666; margin-bottom: 8px;">
+                            ${fileName}
+                        </div>
+                        ${reasonHtml}
+                        <div class="history-item-actions">
+                            <a href="/api/log/${safeId}" class="btn log-btn" style="padding: 6px 12px; font-size: 12px;">📄 Log</a>
+                            <button class="btn download-btn" onclick="downloadZip('${safeId}', 'zip-icon-hist-${safeId}')" style="padding: 6px 12px; font-size: 12px;">
+                                <span id="zip-icon-hist-${safeId}">📦</span> ZIP
+                            </button>
+                        </div>
+                    `;
+                    list.appendChild(li);
+                });
+            } catch (err) {
+                alert('Fehler beim Laden: ' + err.message);
+            }
+        }
+
+        async function cleanupData() {
+            if (!confirm('Wirklich ALLE Daten löschen? Dies kann nicht rückgängig gemacht werden!')) {
+                return;
+            }
+            
+            try {
+                const { res, data } = await fetchJson('/api/cleanup', {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'rksv' }
+                });
+                
+                if (res.ok) {
+                    alert(data.message || 'Alle Daten gelöscht');
+                    loadHistory();
+                } else {
+                    alert('Fehler: ' + data.error);
+                }
+            } catch (err) {
+                alert('Fehler: ' + err.message);
+            }
+        }
+
+        refreshStatus();
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text == null ? '' : String(text);
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
+

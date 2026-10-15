@@ -1,0 +1,11 @@
+# Large binaries fetched by scripts/build.sh (pinned + checksummed).
+# The BMF engine must never be committed: it is not licensed for redistribution.
+assets/*.zip
+assets/*.part
+
+# Build output (the internal exe contains the BMF engine - never publish it)
+dist/
+
+# Generated Windows resources and Go caches
+cmd/rksv-prueftool/*.syso
+.cache/
